@@ -1,0 +1,63 @@
+repositories:
+  - origin_url: git@github.com:mindrealm-ai/context-mode.git
+    prd_uri: prds/context-mode-resource-safety/prd.md
+    goal: |
+      OBJECTIVE: Repair context-mode 1.0.169 so shared SQLite cleanup cannot unlink a live
+      database, contention and IO recovery cannot pin a CPU core, operators can identify the
+      owning process and registration, and Codex configuration converges to exactly one
+      lifecycle-aware registration without removing context compression.
+      ACCEPTANCE CRITERIA: CMRS-AC-001..008 in specs/context-mode-resource-safety/spec.md hold.
+      VERIFICATION: CMRS-VO-001..006 pass against the packaged fork, including old-code failing
+      controls, two-process file-identity assertions, CPU-time measurements, recovery injection,
+      isolated config reconciliation, and sustained release stress.
+      DEPENDENCIES: adr-0001-live-content-databases-are-never-unlinked and the upstream 1.0.169
+      multi-process content-store contract.
+    tasks:
+      - id: context-mode-reproduce-resource-defects
+        title: Reproduce live-database unlink and retry CPU saturation
+        priority: 9050
+        spec_uri: specs/context-mode-resource-safety/spec.md
+        mode: Executor
+        inputs:
+          acceptance_criterion_ids: [CMRS-AC-001, CMRS-AC-003, CMRS-AC-004]
+          verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003]
+          required_deliverables: "Deterministic failing controls for stale-WAL cleanup unlinking a database held by another process, synchronous SQLite retry consuming CPU, and replaced/deleted database IO behavior; evidence records PID, file identity, CPU time, wall time, and exact failure classification."
+          review_mode_floor: AI-Reviewer evidence plus human review queue certification
+          estimated_context_tokens: 70000
+        depends_on: []
+      - id: context-mode-protect-live-databases
+        title: Protect live database identity and bound SQLite recovery
+        priority: 9049
+        spec_uri: specs/context-mode-resource-safety/spec.md
+        mode: Executor
+        inputs:
+          acceptance_criterion_ids: [CMRS-AC-001, CMRS-AC-002, CMRS-AC-003, CMRS-AC-004, CMRS-AC-008]
+          verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003]
+          required_deliverables: "Ownership-safe cleanup, database identity checks, yielding bounded contention, classified one-shot IO recovery, and tests proving the old implementation fails while the patch satisfies the CPU and file-identity assertions."
+          review_mode_floor: AI-Reviewer evidence plus human review queue certification
+          estimated_context_tokens: 90000
+        depends_on: [context-mode-reproduce-resource-defects]
+      - id: context-mode-doctor-and-registration
+        title: Add resource doctor and single-registration reconciliation
+        priority: 9048
+        spec_uri: specs/context-mode-resource-safety/spec.md
+        mode: Executor
+        inputs:
+          acceptance_criterion_ids: [CMRS-AC-005, CMRS-AC-006, CMRS-AC-008]
+          verification_obligation_ids: [CMRS-VO-004, CMRS-VO-005]
+          required_deliverables: "Read-only text and JSON doctor for process ownership, launch path, DB identity/deleted files, CPU/RSS, lifecycle, and registrations; idempotent reversible isolated-config reconciler that removes plugin-plus-explicit duplication in favor of one lifecycle-aware plugin registration."
+          review_mode_floor: AI-Reviewer evidence plus human review queue certification
+          estimated_context_tokens: 80000
+        depends_on: [context-mode-protect-live-databases]
+      - id: context-mode-release-resource-safety
+        title: Package and stress-prove the resource-safe context-mode fork
+        priority: 9047
+        spec_uri: specs/context-mode-resource-safety/spec.md
+        mode: Executor
+        inputs:
+          acceptance_criterion_ids: [CMRS-AC-001, CMRS-AC-002, CMRS-AC-003, CMRS-AC-004, CMRS-AC-005, CMRS-AC-006, CMRS-AC-007, CMRS-AC-008]
+          verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003, CMRS-VO-004, CMRS-VO-005, CMRS-VO-006]
+          required_deliverables: "Packaged fork artifact plus sustained concurrent-reader/writer, cleanup, lifecycle restart, parent-abandonment, forced-lock, and idle stress evidence; release recommendation only when every zero-event and resource threshold assertion passes."
+          review_mode_floor: AI-Reviewer evidence plus human review queue certification
+          estimated_context_tokens: 90000
+        depends_on: [context-mode-doctor-and-registration]
