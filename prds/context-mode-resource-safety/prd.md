@@ -2,14 +2,14 @@
 id: context-mode-resource-safety
 title: "Keep context compression useful without runaway CPU or live-database corruption"
 status: approved
-version: 1
+version: 2
 created: 2026-08-03
 updated: 2026-08-03
 risk: high
 specs:
   - specs/context-mode-resource-safety/spec.md
 decisions_required:
-  - adr-0001-live-content-databases-are-never-unlinked
+  - adr-0004-database-opens-and-destructive-transitions-share-one-exclusion-protocol
   - adr-0002-sqlite-waits-yield-and-recovery-is-classified
   - adr-0003-codex-uses-one-lifecycle-aware-registration
 ---
@@ -83,5 +83,8 @@ after the database defects are repaired.
 
 ## Required Human Decisions
 
-None outstanding. The founder approved creating `mindrealm-ai/context-mode`, patching the fork,
-and keeping implementation in fresh Task sessions on 2026-08-03.
+The founder approved creating `mindrealm-ai/context-mode`, patching the fork, and keeping
+implementation in fresh Task sessions on 2026-08-03. Applying a proven artifact to live Codex
+configuration remains a separate decision: a Reviewer Task submits the exact artifact, allowed
+paths, proposed diff, and rollback to the human review queue, and the rollout Task cannot become
+claimable until a founder-certified approval completes that prerequisite.

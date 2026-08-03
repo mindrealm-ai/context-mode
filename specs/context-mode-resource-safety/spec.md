@@ -1,18 +1,18 @@
 ---
 id: context-mode-resource-safety
 prd: context-mode-resource-safety
-prd_version: ab30f61fac0c1cdd41cd950f9c22a7d56c2cdeaa
+prd_version: 956e3baa3a021f9788c1880d9f58048abcceacc0
 status: approved
-version: 1
+version: 2
 created: 2026-08-03
 updated: 2026-08-03
 dependencies:
-  - adr-0001-live-content-databases-are-never-unlinked
+  - adr-0004-database-opens-and-destructive-transitions-share-one-exclusion-protocol
   - adr-0002-sqlite-waits-yield-and-recovery-is-classified
   - adr-0003-codex-uses-one-lifecycle-aware-registration
 rollout_constraints:
   - "Do not recommend or install the fork until every verification obligation passes on the packaged artifact."
-  - "Live user configuration is operator-owned; repository Tasks prove reconciliation against isolated config homes."
+  - "Live user configuration changes require a completed founder-certified human-review authorization prerequisite."
 open_questions: []
 ---
 
@@ -37,10 +37,13 @@ MCP entry can also start two servers, and the bare command bypasses the plugin l
 
 ## Required Behavior
 
-- **CMRS-REQ-1 — Destructive-transition ownership.** Cleanup treats age as a candidate hint,
-  never as proof of abandonment. Delete, unlink, rename, quarantine, replacement, and fresh-create
-  recovery occur only after proving no live owner exists and acquiring cross-process exclusion.
-  Unknown ownership leaves files untouched and emits a diagnostic.
+- **CMRS-REQ-1 — Shared ownership and destructive exclusion.** Cleanup treats age as a candidate
+  hint, never as proof of abandonment. Every ordinary database open acquires the compatible shared
+  side before opening and retains it through handle close. Delete, unlink, rename, quarantine,
+  replacement, and fresh-create recovery first acquire the exclusive side, then prove no live owner
+  and revalidate pathname and file identity while holding it through the transition. Unknown
+  ownership, failed exclusion, or failed in-lock revalidation leaves files untouched and emits a
+  diagnostic.
 - **CMRS-REQ-2 — Database identity.** Every open content database records enough identity to
   detect that its pathname has been replaced or its inode has been unlinked. A detected identity
   change prevents further normal operations and enters the bounded recovery path.
@@ -101,9 +104,10 @@ databases are opened in place; no eager migration or deletion is permitted.
 
 ## Acceptance Criteria
 
-- **CMRS-AC-001.** WHEN process A holds a content database open and process B runs stale cleanup
-  after the age threshold, the cleanup SHALL keep the main, WAL, and SHM identities linked and
-  SHALL report a live owner.
+- **CMRS-AC-001.** WHEN process A holds a content database open, or a new opener races between
+  candidate selection and process B's stale cleanup, the shared/exclusive protocol SHALL serialize
+  them; cleanup SHALL revalidate inside exclusive exclusion, keep every live main/WAL/SHM identity
+  linked, and report the live owner.
 - **CMRS-AC-002.** WHEN cleanup cannot prove whether a process owns a candidate database, it
   SHALL leave every candidate file untouched and report unknown ownership.
 - **CMRS-AC-003.** WHEN SQLite remains locked through every retry, context-mode SHALL terminate
@@ -126,16 +130,22 @@ databases are opened in place; no eager migration or deletion is permitted.
 - **CMRS-AC-009.** WHEN the upstream baseline runs the stale-WAL, clock-spin, and IO identity
   controls, it SHALL reproduce each named defect with PID, file identity, CPU time, wall time, and
   failure-class evidence; this criterion proves the RED control, not repaired behavior.
-- **CMRS-AC-010.** WHEN an operator authorizes live rollout after release proof, the rollout SHALL
-  back up configuration, quiesce old context-mode processes, reconcile exactly one lifecycle-aware
-  registration, restart, prove doctor and idle-resource health, and demonstrate rollback.
+- **CMRS-AC-010.** WHEN the release is proven, a live-rollout authorization Task SHALL enter human
+  review, SHALL make no live configuration or process change, and SHALL complete only with a
+  founder-certified approval receipt naming the exact release artifact and allowed live paths.
+- **CMRS-AC-011.** WHEN the founder-certified authorization prerequisite completes, the rollout
+  SHALL use its exact artifact and allowed paths, back up configuration, quiesce old context-mode
+  processes, reconcile exactly one lifecycle-aware registration, restart, prove doctor and
+  idle-resource health, and demonstrate rollback.
 
 ## Verification Requirements
 
 - **CMRS-VO-001.** Add a two-process Linux regression that reproduces the old stale-WAL unlink
   behavior. Pin the old implementation as a failing control and prove CMRS-AC-001..002 on the
   patch using file identity plus open-handle inspection. Race unlink, rename, corruption quarantine,
-  and replacement against a live and unknown owner.
+  and replacement against a live and unknown owner. Add a barrier-controlled new opener between
+  candidate selection and destructive transition and prove exclusive-before-proof plus in-lock
+  identity revalidation.
 - **CMRS-VO-002.** Force SQLite lock contention and measure process CPU time and wall time around
   retry. Assert no source-level clock-spin remains and prove CMRS-AC-003.
 - **CMRS-VO-003.** Inject replaced-path, deleted-open-file, `SQLITE_IOERR`, corruption, and lock
@@ -148,21 +158,28 @@ databases are opened in place; no eager migration or deletion is permitted.
   backup/restore behavior.
 - **CMRS-VO-006.** Build the release artifact, run the sustained lifecycle and multi-process
   stress suite against that artifact, and preserve the evidence bundle proving CMRS-AC-007.
-- **CMRS-VO-007.** Under an explicit live-config claim gate, preserve before/after config and process
-  receipts, run backup/reconcile/restart/doctor/idle checks, execute rollback and reapply, and prove
-  CMRS-AC-010 without exposing secrets.
+- **CMRS-VO-007.** Submit the exact release artifact and allowed live paths to the human review queue;
+  prove no live mutation occurs and preserve the founder-certified authorization receipt for
+  CMRS-AC-010.
+- **CMRS-VO-008.** With CMRS-VO-007's completed authorization as a prerequisite, preserve before/after
+  config and process receipts, run backup/reconcile/restart/doctor/idle checks, execute rollback and
+  reapply, and prove CMRS-AC-011 without exposing secrets.
+- **CMRS-VO-009.** Run the three controls against the pinned upstream baseline only and preserve PID,
+  file identity, CPU time, wall time, and failure-class receipts proving CMRS-AC-009 without claiming
+  any repaired-state criterion.
 
 ## Dependencies
 
-- `adrs/adr-0001-live-content-databases-are-never-unlinked.md`.
+- `adrs/adr-0004-database-opens-and-destructive-transitions-share-one-exclusion-protocol.md`.
 - `adrs/adr-0002-sqlite-waits-yield-and-recovery-is-classified.md`.
 - `adrs/adr-0003-codex-uses-one-lifecycle-aware-registration.md`.
 - Upstream behavior in context-mode 1.0.169, including the shared multi-writer contract.
 
 ## Rollout Constraints
 
-As declared in front matter. A separate dependent Task applies the proven artifact only after an
-explicit live-configuration claim gate.
+As declared in front matter. A separate Reviewer Task creates the human-review authorization
+surface without touching live state. The rollout Task becomes claimable only after that Task has a
+founder-certified completion receipt.
 
 ## Open Questions
 

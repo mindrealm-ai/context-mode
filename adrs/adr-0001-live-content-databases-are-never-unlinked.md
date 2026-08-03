@@ -1,12 +1,13 @@
 ---
 id: adr-0001-live-content-databases-are-never-unlinked
 title: "Live content databases are never unlinked"
-status: accepted
-version: 1
+status: superseded
+version: 2
 created: 2026-08-03
 updated: 2026-08-03
 supersedes: []
-superseded_by: []
+superseded_by:
+  - adr-0004-database-opens-and-destructive-transitions-share-one-exclusion-protocol
 ---
 
 # Live content databases are never unlinked

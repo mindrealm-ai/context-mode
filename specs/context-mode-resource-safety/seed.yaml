@@ -4,11 +4,13 @@ repositories:
     goal: |
       OBJECTIVE: Repair context-mode so no destructive SQLite transition can split live database
       identity, waits cannot pin a CPU core, recovery follows one fixed matrix, diagnosis identifies
-      the owner, Codex converges to one lifecycle-aware registration, and live rollout is claim-gated.
-      ACCEPTANCE CRITERIA: CMRS-AC-001..010 in specs/context-mode-resource-safety/spec.md hold.
-      VERIFICATION: CMRS-VO-001..007 prove RED controls, repaired multi-process behavior, explicit
-      CPU/wall thresholds, recovery outcomes, isolated reconciliation, release stress, and live rollback.
-      DEPENDENCIES: ADRs 0001-0003 and the upstream 1.0.169 multi-process contract.
+      the owner, Codex converges to one lifecycle-aware registration, and live rollout follows a
+      founder-certified human-review authorization prerequisite.
+      ACCEPTANCE CRITERIA: CMRS-AC-001..011 in specs/context-mode-resource-safety/spec.md hold.
+      VERIFICATION: CMRS-VO-001..009 prove RED controls, repaired multi-process behavior, explicit
+      CPU/wall thresholds, recovery outcomes, isolated reconciliation, release stress, human-reviewed
+      authorization, and live rollback.
+      DEPENDENCIES: ADRs 0002-0004 and the upstream 1.0.169 multi-process contract.
     tasks:
       - id: context-mode-reproduce-resource-defects
         title: Reproduce live-database unlink and retry CPU saturation
@@ -24,11 +26,11 @@ repositories:
         goal: |
           OBJECTIVE: Establish the failing baseline for the three context-mode resource defects.
           ACCEPTANCE CRITERIA: CMRS-AC-009 holds with complete PID, identity, CPU, wall, and class evidence.
-          VERIFICATION: Run CMRS-VO-001..003 against the upstream baseline and preserve the RED receipts.
+          VERIFICATION: Run CMRS-VO-009 against the upstream baseline and preserve the RED receipts.
           DEPENDENCIES: None.
         inputs:
           acceptance_criterion_ids: [CMRS-AC-009]
-          verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003]
+          verification_obligation_ids: [CMRS-VO-009]
           writable_paths: [tests/resource-safety/, findings/context-mode-resource-safety/]
           required_deliverables: "tests/resource-safety/live-db-transitions.test.ts, tests/resource-safety/sqlite-retry-cpu.test.ts, tests/resource-safety/io-recovery-matrix.test.ts, and findings/context-mode-resource-safety/baseline.json."
           review_mode_floor: AI-Reviewer evidence plus human review queue certification
@@ -41,20 +43,20 @@ repositories:
         spec_uri: specs/context-mode-resource-safety/spec.md
         mode: Executor
         plan: |
-          Replace age-authorized cleanup with no-live-owner proof plus cross-process exclusion for every
-          delete, rename, quarantine, replacement, and recovery path. Replace synchronous retry with yielding
-          bounded waits and implement the exact BUSY, identity, corruption, and generic-IOERR outcome matrix.
-          Turn each baseline control GREEN without weakening it.
+          Make every ordinary open acquire and retain shared ownership, and every destructive path acquire
+          exclusive exclusion before proving owners and revalidating identity inside the lock. Cover delete,
+          rename, quarantine, replacement, and recovery with a barrier-controlled new-opener race. Replace
+          synchronous retry with yielding bounded waits and implement the exact recovery matrix.
         goal: |
           OBJECTIVE: Eliminate live database identity splits and CPU-spinning SQLite waits.
-          ACCEPTANCE CRITERIA: CMRS-AC-001..004 and CMRS-AC-008 hold.
+          ACCEPTANCE CRITERIA: CMRS-AC-001..004 hold.
           VERIFICATION: Run CMRS-VO-001..003 on the patch and compare with the preserved failing baseline.
           DEPENDENCIES: context-mode-reproduce-resource-defects.
         inputs:
-          acceptance_criterion_ids: [CMRS-AC-001, CMRS-AC-002, CMRS-AC-003, CMRS-AC-004, CMRS-AC-008]
+          acceptance_criterion_ids: [CMRS-AC-001, CMRS-AC-002, CMRS-AC-003, CMRS-AC-004]
           verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003]
           writable_paths: [src/store.ts, src/db-base.ts, src/session/, tests/resource-safety/]
-          required_deliverables: "Ownership/exclusion implementation in src/store.ts and shared SQLite lifecycle code, yielding recovery matrix in src/db-base.ts, plus GREEN versions of all tests/resource-safety controls."
+          required_deliverables: "Shared-open/exclusive-destructive protocol in src/store.ts and shared SQLite lifecycle code, exclusive-before-proof plus in-lock identity revalidation, barrier-controlled new-opener race coverage for every destructive transition, yielding recovery matrix in src/db-base.ts, and GREEN versions of all repair controls."
           review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 90000
         depends_on: [context-mode-reproduce-resource-defects]
@@ -70,14 +72,14 @@ repositories:
           Codex homes, converging recognized duplicates to the plugin launcher and refusing ambiguous commands.
         goal: |
           OBJECTIVE: Make resource ownership visible and isolated Codex registration reconciliation safe.
-          ACCEPTANCE CRITERIA: CMRS-AC-005..006 hold.
+          ACCEPTANCE CRITERIA: CMRS-AC-005..006 and CMRS-AC-008 hold.
           VERIFICATION: Run CMRS-VO-004..005 across every process and config fixture.
           DEPENDENCIES: context-mode-protect-live-databases.
         inputs:
-          acceptance_criterion_ids: [CMRS-AC-005, CMRS-AC-006]
+          acceptance_criterion_ids: [CMRS-AC-005, CMRS-AC-006, CMRS-AC-008]
           verification_obligation_ids: [CMRS-VO-004, CMRS-VO-005]
           writable_paths: [src/doctor.ts, src/adapters/codex/, start.mjs, tests/resource-safety/]
-          required_deliverables: "Read-only doctor text/JSON contract and tests; Codex dry-run/apply/restore reconciler and isolated-home fixtures proving one lifecycle-aware registration and idempotency."
+          required_deliverables: "Read-only doctor text/JSON contract and tests including explicit unavailable values; Codex dry-run/apply/restore reconciler and isolated-home fixtures proving one lifecycle-aware registration and idempotency."
           review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 80000
         depends_on: [context-mode-protect-live-databases]
@@ -104,28 +106,51 @@ repositories:
           review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 90000
         depends_on: [context-mode-doctor-and-registration]
-      - id: context-mode-live-codex-rollout
-        title: Reconcile and verify the live Codex context-mode installation
-        # Lowest and claim-gated: mutates operator configuration only after the exact artifact is release-proven.
+      - id: context-mode-live-rollout-authorization
+        title: Authorize the exact context-mode artifact and live rollout paths
+        # Creates the founder decision surface after release proof and performs no live mutation.
         priority: 9046
         spec_uri: specs/context-mode-resource-safety/spec.md
-        mode: Executor
+        mode: Reviewer
         plan: |
-          Stop at the live_configuration claim gate. Once authorized, back up the live Codex configuration,
-          quiesce old context-mode processes, install the exact release artifact, reconcile one plugin registration,
-          restart, run doctor and idle checks, prove rollback, then reapply the verified shape. Persist redacted receipts.
+          Assemble the exact release artifact identity, stress receipt, intended live configuration paths,
+          backup/rollback procedure, and redacted proposed diff. Submit them to the human review queue and
+          make no live process or configuration change. Complete only on a founder-certified approval.
         goal: |
-          OBJECTIVE: Apply the proven fork to the live Codex harness with backup, health proof, and rollback.
-          ACCEPTANCE CRITERIA: CMRS-AC-010 holds without exposing secrets or leaving duplicate processes.
-          VERIFICATION: Run CMRS-VO-007 under the explicit claim gate and preserve redacted before/after receipts.
-          DEPENDENCIES: context-mode-release-resource-safety and founder live-configuration authorization.
+          OBJECTIVE: Obtain explicit human authority for the exact live context-mode rollout.
+          ACCEPTANCE CRITERIA: CMRS-AC-010 holds without mutating live state.
+          VERIFICATION: Run CMRS-VO-007 and preserve the founder-certified decision receipt.
+          DEPENDENCIES: context-mode-release-resource-safety.
         inputs:
-          claim_gate: live_configuration
           acceptance_criterion_ids: [CMRS-AC-010]
           verification_obligation_ids: [CMRS-VO-007]
           writable_paths: [findings/context-mode-resource-safety/live-rollout/]
+          required_deliverables: "findings/context-mode-resource-safety/live-rollout/authorization-request.json and founder-certified authorization-decision.json naming the exact artifact, allowed paths, proposed diff, and rollback; zero live mutations."
+          review_mode_floor: founder human-review decision required for completion
+          estimated_context_tokens: 20000
+        depends_on: [context-mode-release-resource-safety]
+      - id: context-mode-live-codex-rollout
+        title: Reconcile and verify the live Codex context-mode installation
+        # Lowest: claimable only after the founder-certified authorization prerequisite completes.
+        priority: 9045
+        spec_uri: specs/context-mode-resource-safety/spec.md
+        mode: Executor
+        plan: |
+          Read the completed authorization receipt and refuse any artifact or path outside it. Back up the live
+          Codex configuration, quiesce old context-mode processes, install the exact release artifact, reconcile
+          one plugin registration, restart, run doctor and idle checks, prove rollback, then reapply the verified
+          shape. Persist redacted receipts.
+        goal: |
+          OBJECTIVE: Apply the proven fork to the live Codex harness with backup, health proof, and rollback.
+          ACCEPTANCE CRITERIA: CMRS-AC-011 holds without exposing secrets or leaving duplicate processes.
+          VERIFICATION: Run CMRS-VO-008 using the exact completed authorization receipt.
+          DEPENDENCIES: context-mode-live-rollout-authorization.
+        inputs:
+          acceptance_criterion_ids: [CMRS-AC-011]
+          verification_obligation_ids: [CMRS-VO-008]
+          writable_paths: [findings/context-mode-resource-safety/live-rollout/]
           authorized_live_paths: [~/.codex/config.toml, ~/.codex/plugins/, ~/.codex/context-mode/]
           required_deliverables: "Redacted backup/reconcile/restart/doctor/idle/rollback/reapply receipts under findings/context-mode-resource-safety/live-rollout/."
-          review_mode_floor: founder claim approval plus AI-Reviewer evidence plus human review queue certification
+          review_mode_floor: founder authorization receipt plus AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 40000
-        depends_on: [context-mode-release-resource-safety]
+        depends_on: [context-mode-live-rollout-authorization]
