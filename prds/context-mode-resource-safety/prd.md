@@ -7,9 +7,11 @@ created: 2026-08-03
 updated: 2026-08-03
 risk: high
 specs:
-  - context-mode-resource-safety
+  - specs/context-mode-resource-safety/spec.md
 decisions_required:
   - adr-0001-live-content-databases-are-never-unlinked
+  - adr-0002-sqlite-waits-yield-and-recovery-is-classified
+  - adr-0003-codex-uses-one-lifecycle-aware-registration
 ---
 
 # Keep context compression useful without runaway CPU or live-database corruption
@@ -55,8 +57,8 @@ after the database defects are repaired.
 ## Constraints
 
 - Preserve multi-window and multi-process access to the shared content store.
-- Cleanup must establish exclusive ownership or use a close-and-rename protocol; file age alone
-  is never ownership evidence.
+- Every cleanup, delete, rename, quarantine, or replacement must establish no-live-owner proof and
+  hold cross-process exclusion; file age and closing only the current handle are never ownership evidence.
 - Retries use SQLite's bounded wait or an asynchronous/yielding delay, never a JavaScript
   busy-wait.
 - Unknown ownership or telemetry is represented as unknown and fails cleanup closed.

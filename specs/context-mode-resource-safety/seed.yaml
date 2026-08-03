@@ -2,62 +2,130 @@ repositories:
   - origin_url: git@github.com:mindrealm-ai/context-mode.git
     prd_uri: prds/context-mode-resource-safety/prd.md
     goal: |
-      OBJECTIVE: Repair context-mode 1.0.169 so shared SQLite cleanup cannot unlink a live
-      database, contention and IO recovery cannot pin a CPU core, operators can identify the
-      owning process and registration, and Codex configuration converges to exactly one
-      lifecycle-aware registration without removing context compression.
-      ACCEPTANCE CRITERIA: CMRS-AC-001..008 in specs/context-mode-resource-safety/spec.md hold.
-      VERIFICATION: CMRS-VO-001..006 pass against the packaged fork, including old-code failing
-      controls, two-process file-identity assertions, CPU-time measurements, recovery injection,
-      isolated config reconciliation, and sustained release stress.
-      DEPENDENCIES: adr-0001-live-content-databases-are-never-unlinked and the upstream 1.0.169
-      multi-process content-store contract.
+      OBJECTIVE: Repair context-mode so no destructive SQLite transition can split live database
+      identity, waits cannot pin a CPU core, recovery follows one fixed matrix, diagnosis identifies
+      the owner, Codex converges to one lifecycle-aware registration, and live rollout is claim-gated.
+      ACCEPTANCE CRITERIA: CMRS-AC-001..010 in specs/context-mode-resource-safety/spec.md hold.
+      VERIFICATION: CMRS-VO-001..007 prove RED controls, repaired multi-process behavior, explicit
+      CPU/wall thresholds, recovery outcomes, isolated reconciliation, release stress, and live rollback.
+      DEPENDENCIES: ADRs 0001-0003 and the upstream 1.0.169 multi-process contract.
     tasks:
       - id: context-mode-reproduce-resource-defects
         title: Reproduce live-database unlink and retry CPU saturation
+        # Highest in this isolated fork: establishes non-vacuous RED controls required by every repair.
         priority: 9050
         spec_uri: specs/context-mode-resource-safety/spec.md
         mode: Executor
+        plan: |
+          Add deterministic Linux controls at tests/resource-safety/ for stale-WAL destructive cleanup,
+          clock-spinning lock retry, and deleted/replaced/IO failure identity. Run them against the pinned
+          upstream baseline only and preserve structured evidence under findings/context-mode-resource-safety/.
+          The Task passes when it reproduces the defects; it does not claim repaired-state criteria.
+        goal: |
+          OBJECTIVE: Establish the failing baseline for the three context-mode resource defects.
+          ACCEPTANCE CRITERIA: CMRS-AC-009 holds with complete PID, identity, CPU, wall, and class evidence.
+          VERIFICATION: Run CMRS-VO-001..003 against the upstream baseline and preserve the RED receipts.
+          DEPENDENCIES: None.
         inputs:
-          acceptance_criterion_ids: [CMRS-AC-001, CMRS-AC-003, CMRS-AC-004]
+          acceptance_criterion_ids: [CMRS-AC-009]
           verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003]
-          required_deliverables: "Deterministic failing controls for stale-WAL cleanup unlinking a database held by another process, synchronous SQLite retry consuming CPU, and replaced/deleted database IO behavior; evidence records PID, file identity, CPU time, wall time, and exact failure classification."
+          writable_paths: [tests/resource-safety/, findings/context-mode-resource-safety/]
+          required_deliverables: "tests/resource-safety/live-db-transitions.test.ts, tests/resource-safety/sqlite-retry-cpu.test.ts, tests/resource-safety/io-recovery-matrix.test.ts, and findings/context-mode-resource-safety/baseline.json."
           review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 70000
         depends_on: []
       - id: context-mode-protect-live-databases
         title: Protect live database identity and bound SQLite recovery
+        # Implements the root-cause repair after the RED controls exist; blocks diagnosis and release.
         priority: 9049
         spec_uri: specs/context-mode-resource-safety/spec.md
         mode: Executor
+        plan: |
+          Replace age-authorized cleanup with no-live-owner proof plus cross-process exclusion for every
+          delete, rename, quarantine, replacement, and recovery path. Replace synchronous retry with yielding
+          bounded waits and implement the exact BUSY, identity, corruption, and generic-IOERR outcome matrix.
+          Turn each baseline control GREEN without weakening it.
+        goal: |
+          OBJECTIVE: Eliminate live database identity splits and CPU-spinning SQLite waits.
+          ACCEPTANCE CRITERIA: CMRS-AC-001..004 and CMRS-AC-008 hold.
+          VERIFICATION: Run CMRS-VO-001..003 on the patch and compare with the preserved failing baseline.
+          DEPENDENCIES: context-mode-reproduce-resource-defects.
         inputs:
           acceptance_criterion_ids: [CMRS-AC-001, CMRS-AC-002, CMRS-AC-003, CMRS-AC-004, CMRS-AC-008]
           verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003]
-          required_deliverables: "Ownership-safe cleanup, database identity checks, yielding bounded contention, classified one-shot IO recovery, and tests proving the old implementation fails while the patch satisfies the CPU and file-identity assertions."
+          writable_paths: [src/store.ts, src/db-base.ts, src/session/, tests/resource-safety/]
+          required_deliverables: "Ownership/exclusion implementation in src/store.ts and shared SQLite lifecycle code, yielding recovery matrix in src/db-base.ts, plus GREEN versions of all tests/resource-safety controls."
           review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 90000
         depends_on: [context-mode-reproduce-resource-defects]
       - id: context-mode-doctor-and-registration
         title: Add resource doctor and single-registration reconciliation
+        # Makes the repaired runtime diagnosable and the supported Codex lifecycle reproducible.
         priority: 9048
         spec_uri: specs/context-mode-resource-safety/spec.md
         mode: Executor
+        plan: |
+          Add stable text/JSON doctor output for process ancestry, launch path, database identity/deleted files,
+          CPU/RSS, lifecycle, and registration sources. Add dry-run/apply/restore reconciliation against isolated
+          Codex homes, converging recognized duplicates to the plugin launcher and refusing ambiguous commands.
+        goal: |
+          OBJECTIVE: Make resource ownership visible and isolated Codex registration reconciliation safe.
+          ACCEPTANCE CRITERIA: CMRS-AC-005..006 hold.
+          VERIFICATION: Run CMRS-VO-004..005 across every process and config fixture.
+          DEPENDENCIES: context-mode-protect-live-databases.
         inputs:
-          acceptance_criterion_ids: [CMRS-AC-005, CMRS-AC-006, CMRS-AC-008]
+          acceptance_criterion_ids: [CMRS-AC-005, CMRS-AC-006]
           verification_obligation_ids: [CMRS-VO-004, CMRS-VO-005]
-          required_deliverables: "Read-only text and JSON doctor for process ownership, launch path, DB identity/deleted files, CPU/RSS, lifecycle, and registrations; idempotent reversible isolated-config reconciler that removes plugin-plus-explicit duplication in favor of one lifecycle-aware plugin registration."
+          writable_paths: [src/doctor.ts, src/adapters/codex/, start.mjs, tests/resource-safety/]
+          required_deliverables: "Read-only doctor text/JSON contract and tests; Codex dry-run/apply/restore reconciler and isolated-home fixtures proving one lifecycle-aware registration and idempotency."
           review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 80000
         depends_on: [context-mode-protect-live-databases]
       - id: context-mode-release-resource-safety
         title: Package and stress-prove the resource-safe context-mode fork
+        # Release evidence is valuable only after repair and diagnosis; it unblocks comparison and live rollout.
         priority: 9047
         spec_uri: specs/context-mode-resource-safety/spec.md
         mode: Executor
+        plan: |
+          Package the fork, then run the 30-minute concurrent lifecycle/storage stress suite and the five-minute
+          post-quiescence idle window against that exact artifact. Preserve versions, process-tree boundaries,
+          database identities, CPU/RSS, failures, unavailable metrics, and zero-event assertions.
+        goal: |
+          OBJECTIVE: Produce one stress-proven context-mode artifact eligible for controlled use.
+          ACCEPTANCE CRITERIA: CMRS-AC-007 holds for the packaged artifact.
+          VERIFICATION: Run CMRS-VO-006 with the exact 30-minute stress and idle thresholds.
+          DEPENDENCIES: context-mode-doctor-and-registration.
         inputs:
-          acceptance_criterion_ids: [CMRS-AC-001, CMRS-AC-002, CMRS-AC-003, CMRS-AC-004, CMRS-AC-005, CMRS-AC-006, CMRS-AC-007, CMRS-AC-008]
-          verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003, CMRS-VO-004, CMRS-VO-005, CMRS-VO-006]
-          required_deliverables: "Packaged fork artifact plus sustained concurrent-reader/writer, cleanup, lifecycle restart, parent-abandonment, forced-lock, and idle stress evidence; release recommendation only when every zero-event and resource threshold assertion passes."
+          acceptance_criterion_ids: [CMRS-AC-007]
+          verification_obligation_ids: [CMRS-VO-006]
+          writable_paths: [tests/resource-safety/, findings/context-mode-resource-safety/, package.json]
+          required_deliverables: "Packaged artifact identity and findings/context-mode-resource-safety/release.json containing the complete 30-minute stress and five-minute idle evidence."
           review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 90000
         depends_on: [context-mode-doctor-and-registration]
+      - id: context-mode-live-codex-rollout
+        title: Reconcile and verify the live Codex context-mode installation
+        # Lowest and claim-gated: mutates operator configuration only after the exact artifact is release-proven.
+        priority: 9046
+        spec_uri: specs/context-mode-resource-safety/spec.md
+        mode: Executor
+        plan: |
+          Stop at the live_configuration claim gate. Once authorized, back up the live Codex configuration,
+          quiesce old context-mode processes, install the exact release artifact, reconcile one plugin registration,
+          restart, run doctor and idle checks, prove rollback, then reapply the verified shape. Persist redacted receipts.
+        goal: |
+          OBJECTIVE: Apply the proven fork to the live Codex harness with backup, health proof, and rollback.
+          ACCEPTANCE CRITERIA: CMRS-AC-010 holds without exposing secrets or leaving duplicate processes.
+          VERIFICATION: Run CMRS-VO-007 under the explicit claim gate and preserve redacted before/after receipts.
+          DEPENDENCIES: context-mode-release-resource-safety and founder live-configuration authorization.
+        inputs:
+          claim_gate: live_configuration
+          acceptance_criterion_ids: [CMRS-AC-010]
+          verification_obligation_ids: [CMRS-VO-007]
+          writable_paths: [findings/context-mode-resource-safety/live-rollout/]
+          authorized_live_paths: [~/.codex/config.toml, ~/.codex/plugins/, ~/.codex/context-mode/]
+          required_deliverables: "Redacted backup/reconcile/restart/doctor/idle/rollback/reapply receipts under findings/context-mode-resource-safety/live-rollout/."
+          review_mode_floor: founder claim approval plus AI-Reviewer evidence plus human review queue certification
+          estimated_context_tokens: 40000
+        depends_on: [context-mode-release-resource-safety]
