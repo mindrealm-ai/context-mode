@@ -85,6 +85,7 @@ after the database defects are repaired.
 
 The founder approved creating `mindrealm-ai/context-mode`, patching the fork, and keeping
 implementation in fresh Task sessions on 2026-08-03. Applying a proven artifact to live Codex
-configuration remains a separate decision: a Reviewer Task submits the exact artifact, allowed
-paths, proposed diff, and rollback to the human review queue, and the rollout Task cannot become
-claimable until a founder-certified approval completes that prerequisite.
+configuration remains a separate decision: the release Task carries the human-authorization
+obligation and submits the exact artifact, allowed paths, proposed diff, and rollback to the human
+review queue, and the rollout Task cannot become claimable until a founder-certified approval
+completes that prerequisite.

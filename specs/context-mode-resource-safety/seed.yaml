@@ -92,43 +92,26 @@ repositories:
         plan: |
           Package the fork, then run the 30-minute concurrent lifecycle/storage stress suite and the five-minute
           post-quiescence idle window against that exact artifact. Preserve versions, process-tree boundaries,
-          database identities, CPU/RSS, failures, unavailable metrics, and zero-event assertions.
+          database identities, CPU/RSS, failures, unavailable metrics, and zero-event assertions. Then assemble
+          the exact release artifact identity, stress receipt, intended live configuration paths, backup/rollback
+          procedure, and redacted proposed diff, and submit them to the human review queue as the founder
+          authorization request; make no live process or configuration change.
         goal: |
-          OBJECTIVE: Produce one stress-proven context-mode artifact eligible for controlled use.
-          ACCEPTANCE CRITERIA: CMRS-AC-007 holds for the packaged artifact.
-          VERIFICATION: Run CMRS-VO-006 with the exact 30-minute stress and idle thresholds.
+          OBJECTIVE: Produce one stress-proven context-mode artifact and obtain founder-certified human
+          authorization for its exact live rollout.
+          ACCEPTANCE CRITERIA: CMRS-AC-007 holds for the packaged artifact; CMRS-AC-010 holds without mutating
+          live state.
+          VERIFICATION: Run CMRS-VO-006 with the exact 30-minute stress and idle thresholds; run CMRS-VO-007 and
+          preserve the founder-certified authorization decision receipt.
           DEPENDENCIES: context-mode-doctor-and-registration.
         inputs:
-          acceptance_criterion_ids: [CMRS-AC-007]
-          verification_obligation_ids: [CMRS-VO-006]
+          acceptance_criterion_ids: [CMRS-AC-007, CMRS-AC-010]
+          verification_obligation_ids: [CMRS-VO-006, CMRS-VO-007]
           writable_paths: [tests/resource-safety/, findings/context-mode-resource-safety/, package.json]
-          required_deliverables: "Packaged artifact identity and findings/context-mode-resource-safety/release.json containing the complete 30-minute stress and five-minute idle evidence."
-          review_mode_floor: AI-Reviewer evidence plus human review queue certification
+          required_deliverables: "Packaged artifact identity, findings/context-mode-resource-safety/release.json containing the complete 30-minute stress and five-minute idle evidence, and findings/context-mode-resource-safety/live-rollout/authorization-request.json plus founder-certified authorization-decision.json naming the exact artifact, allowed paths, proposed diff, and rollback; zero live mutations."
+          review_mode_floor: AI-Reviewer evidence plus human review queue certification plus founder human-review authorization decision required for completion
           estimated_context_tokens: 90000
         depends_on: [context-mode-doctor-and-registration]
-      - id: context-mode-live-rollout-authorization
-        title: Authorize the exact context-mode artifact and live rollout paths
-        # Creates the founder decision surface after release proof and performs no live mutation.
-        priority: 9046
-        spec_uri: specs/context-mode-resource-safety/spec.md
-        mode: Reviewer
-        plan: |
-          Assemble the exact release artifact identity, stress receipt, intended live configuration paths,
-          backup/rollback procedure, and redacted proposed diff. Submit them to the human review queue and
-          make no live process or configuration change. Complete only on a founder-certified approval.
-        goal: |
-          OBJECTIVE: Obtain explicit human authority for the exact live context-mode rollout.
-          ACCEPTANCE CRITERIA: CMRS-AC-010 holds without mutating live state.
-          VERIFICATION: Run CMRS-VO-007 and preserve the founder-certified decision receipt.
-          DEPENDENCIES: context-mode-release-resource-safety.
-        inputs:
-          acceptance_criterion_ids: [CMRS-AC-010]
-          verification_obligation_ids: [CMRS-VO-007]
-          writable_paths: [findings/context-mode-resource-safety/live-rollout/]
-          required_deliverables: "findings/context-mode-resource-safety/live-rollout/authorization-request.json and founder-certified authorization-decision.json naming the exact artifact, allowed paths, proposed diff, and rollback; zero live mutations."
-          review_mode_floor: founder human-review decision required for completion
-          estimated_context_tokens: 20000
-        depends_on: [context-mode-release-resource-safety]
       - id: context-mode-live-codex-rollout
         title: Reconcile and verify the live Codex context-mode installation
         # Lowest: claimable only after the founder-certified authorization prerequisite completes.
@@ -144,7 +127,7 @@ repositories:
           OBJECTIVE: Apply the proven fork to the live Codex harness with backup, health proof, and rollback.
           ACCEPTANCE CRITERIA: CMRS-AC-011 holds without exposing secrets or leaving duplicate processes.
           VERIFICATION: Run CMRS-VO-008 using the exact completed authorization receipt.
-          DEPENDENCIES: context-mode-live-rollout-authorization.
+          DEPENDENCIES: context-mode-release-resource-safety.
         inputs:
           acceptance_criterion_ids: [CMRS-AC-011]
           verification_obligation_ids: [CMRS-VO-008]
@@ -153,4 +136,4 @@ repositories:
           required_deliverables: "Redacted backup/reconcile/restart/doctor/idle/rollback/reapply receipts under findings/context-mode-resource-safety/live-rollout/."
           review_mode_floor: founder authorization receipt plus AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 40000
-        depends_on: [context-mode-live-rollout-authorization]
+        depends_on: [context-mode-release-resource-safety]

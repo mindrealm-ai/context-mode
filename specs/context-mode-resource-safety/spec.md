@@ -1,7 +1,7 @@
 ---
 id: context-mode-resource-safety
 prd: context-mode-resource-safety
-prd_version: 956e3baa3a021f9788c1880d9f58048abcceacc0
+prd_version: 4e265beffdbb22d738b9c723da855590e3ab004c
 status: approved
 version: 2
 created: 2026-08-03
@@ -130,9 +130,10 @@ databases are opened in place; no eager migration or deletion is permitted.
 - **CMRS-AC-009.** WHEN the upstream baseline runs the stale-WAL, clock-spin, and IO identity
   controls, it SHALL reproduce each named defect with PID, file identity, CPU time, wall time, and
   failure-class evidence; this criterion proves the RED control, not repaired behavior.
-- **CMRS-AC-010.** WHEN the release is proven, a live-rollout authorization Task SHALL enter human
-  review, SHALL make no live configuration or process change, and SHALL complete only with a
-  founder-certified approval receipt naming the exact release artifact and allowed live paths.
+- **CMRS-AC-010.** WHEN the release is proven, the release Task SHALL submit a live-rollout
+  authorization request to human review, SHALL make no live configuration or process change, and
+  SHALL complete only with a founder-certified approval receipt naming the exact release artifact
+  and allowed live paths.
 - **CMRS-AC-011.** WHEN the founder-certified authorization prerequisite completes, the rollout
   SHALL use its exact artifact and allowed paths, back up configuration, quiesce old context-mode
   processes, reconcile exactly one lifecycle-aware registration, restart, prove doctor and
@@ -177,9 +178,9 @@ databases are opened in place; no eager migration or deletion is permitted.
 
 ## Rollout Constraints
 
-As declared in front matter. A separate Reviewer Task creates the human-review authorization
-surface without touching live state. The rollout Task becomes claimable only after that Task has a
-founder-certified completion receipt.
+As declared in front matter. The release Task carries the human-review authorization obligation
+without touching live state. The rollout Task becomes claimable only after the release Task holds a
+founder-certified authorization receipt.
 
 ## Open Questions
 
