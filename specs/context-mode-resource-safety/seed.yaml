@@ -33,7 +33,6 @@ repositories:
           verification_obligation_ids: [CMRS-VO-009]
           writable_paths: [tests/resource-safety/, findings/context-mode-resource-safety/]
           required_deliverables: "tests/resource-safety/live-db-transitions.test.ts, tests/resource-safety/sqlite-retry-cpu.test.ts, tests/resource-safety/io-recovery-matrix.test.ts, and findings/context-mode-resource-safety/baseline.json."
-          review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 70000
         depends_on: []
       - id: context-mode-protect-live-databases
@@ -57,7 +56,6 @@ repositories:
           verification_obligation_ids: [CMRS-VO-001, CMRS-VO-002, CMRS-VO-003]
           writable_paths: [src/store.ts, src/db-base.ts, src/session/, tests/resource-safety/]
           required_deliverables: "Shared-open/exclusive-destructive protocol in src/store.ts and shared SQLite lifecycle code, exclusive-before-proof plus in-lock identity revalidation, barrier-controlled new-opener race coverage for every destructive transition, yielding recovery matrix in src/db-base.ts, and GREEN versions of all repair controls."
-          review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 90000
         depends_on: [context-mode-reproduce-resource-defects]
       - id: context-mode-doctor-and-registration
@@ -80,7 +78,6 @@ repositories:
           verification_obligation_ids: [CMRS-VO-004, CMRS-VO-005]
           writable_paths: [src/doctor.ts, src/adapters/codex/, start.mjs, tests/resource-safety/]
           required_deliverables: "Read-only doctor text/JSON contract and tests including explicit unavailable values; Codex dry-run/apply/restore reconciler and isolated-home fixtures proving one lifecycle-aware registration and idempotency."
-          review_mode_floor: AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 80000
         depends_on: [context-mode-protect-live-databases]
       - id: context-mode-release-resource-safety
@@ -109,7 +106,6 @@ repositories:
           verification_obligation_ids: [CMRS-VO-006, CMRS-VO-007]
           writable_paths: [tests/resource-safety/, findings/context-mode-resource-safety/, package.json]
           required_deliverables: "Packaged artifact identity, findings/context-mode-resource-safety/release.json containing the complete 30-minute stress and five-minute idle evidence, and findings/context-mode-resource-safety/live-rollout/authorization-request.json plus founder-certified authorization-decision.json naming the exact artifact, allowed paths, proposed diff, and rollback; zero live mutations."
-          review_mode_floor: AI-Reviewer evidence plus human review queue certification plus founder human-review authorization decision required for completion
           estimated_context_tokens: 90000
         depends_on: [context-mode-doctor-and-registration]
       - id: context-mode-live-codex-rollout
@@ -134,6 +130,5 @@ repositories:
           writable_paths: [findings/context-mode-resource-safety/live-rollout/]
           authorized_live_paths: [~/.codex/config.toml, ~/.codex/plugins/, ~/.codex/context-mode/]
           required_deliverables: "Redacted backup/reconcile/restart/doctor/idle/rollback/reapply receipts under findings/context-mode-resource-safety/live-rollout/."
-          review_mode_floor: founder authorization receipt plus AI-Reviewer evidence plus human review queue certification
           estimated_context_tokens: 40000
         depends_on: [context-mode-release-resource-safety]
